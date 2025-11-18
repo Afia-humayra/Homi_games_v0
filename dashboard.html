@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Homi — Parent Dashboard</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --muted:#69707a;
+      --accent:#6c63ff;
+      --success:#22c55e;
+      --danger:#ef4444;
+      --glass: rgba(255,255,255,0.6);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; background:linear-gradient(180deg,#f0f4ff 0%,var(--bg) 100%); color:#111;}
+    .wrap{max-width:1200px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px}
+    .logo{width:68px;height:68px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#7b6cff);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:20px;box-shadow:0 6px 18px rgba(108,99,255,0.18)}
+    h1{font-size:20px;margin:0}
+    .sub{color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;margin-top:18px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(20,20,40,0.04)}
+    .card.col-span-3{grid-column:span 3}
+    .card.col-span-9{grid-column:span 9}
+    .card.col-span-4{grid-column:span 4}
+    .card.col-span-8{grid-column:span 8}
+    .stats{display:flex;gap:12px;align-items:center}
+    .stat{flex:1}
+    .big{font-size:20px;font-weight:700}
+    .muted{color:var(--muted)}
+    .controls{display:flex;gap:8px;margin-top:10px}
+    button{background:var(--accent);color:#fff;padding:8px 12px;border-radius:10px;border:0;cursor:pointer}
+    button.secondary{background:#eef2ff;color:var(--accent);border:1px solid rgba(108,99,255,0.12)}
+    .charts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    canvas{background:transparent}
+    .table-wrap{margin-top:12px;overflow:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:10px;text-align:left;border-bottom:1px solid #f2f4f7}
+    th{color:var(--muted);font-weight:600}
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+    /* Responsive */
+    @media (max-width:1000px){ .charts{grid-template-columns:1fr 1fr} .card.col-span-3{grid-column:span 6} .card.col-span-9{grid-column:span 6} .card.col-span-4{grid-column:span 6} .card.col-span-8{grid-column:span 6} }
+    @media (max-width:640px){ .grid{grid-template-columns:repeat(6,1fr)} .charts{grid-template-columns:1fr} }
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:linear-gradient(90deg,rgba(108,99,255,0.12),rgba(108,99,255,0.06));color:var(--accent);font-weight:600}
+    .spark{font-size:12px;color:var(--muted)}
+    .progressBar{height:10px;border-radius:6px;background:#f1f5ff;overflow:hidden}
+    .progressFill{height:100%;background:linear-gradient(90deg,var(--accent),#7b6cff)}
+    .small{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">H</div>
+      <div>
+        <h1>Homi — Parent Dashboard</h1>
+        <div class="sub">Overview of child progress, playtime, and game-by-game analytics</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <div class="spark">Data source: local JSON (front-end only)</div>
+        <button id="importBtn" class="secondary">Import data</button>
+        <button id="exportBtn" class="secondary">Export data</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Quick cards -->
+      <div class="card col-span-3">
+        <div class="stats">
+          <div class="stat">
+            <div class="muted">Child</div>
+            <div class="big" id="childName">Ayesha</div>
+            <div class="spark">Age 8 • Class 3</div>
+          </div>
+          <div style="text-align:right">
+            <div class="muted">Total Playtime</div>
+            <div class="big" id="totalPlay">—</div>
+            <div class="spark">minutes (last loaded data)</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <div class="muted small">Remaining time (example)</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+            <div style="flex:1">
+              <div class="progressBar"><div id="remainingFill" class="progressFill" style="width:40%"></div></div>
+            </div>
+            <div class="small">40%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card col-span-3">
+        <div class="muted">Distinct Games Played</div>
+        <div class="big" id="gamesPlayed">—</div>
+        <div class="spark">last 30 days</div>
+      </div>
+
+      <div class="card col-span-3">
+        <div class="muted">Active Days</div>
+        <div class="big" id="activeDays">—</div>
+        <div class="spark">days with > 1 min play</div>
+      </div>
+
+      <div class="card col-span-3">
+        <div class="muted">Overall Avg Score</div>
+        <div class="big" id="avgScore">—</div>
+        <div class="spark">0–100</div>
+      </div>
+
+      <!-- Progress cards for specific games -->
+      <div class="card col-span-4">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h3 style="margin:0;font-size:16px">Face Parts — Progress</h3>
+            <div class="small">Latest: <span id="facePartsDate">2025-10-31</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="big" id="facePartsScore">10</div>
+            <div class="muted">score</div>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="progressBar"><div id="fpFill" class="progressFill" style="width:10%"></div></div>
+        </div>
+      </div>
+
+      <div class="card col-span-4">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h3 style="margin:0;font-size:16px">Addition — Progress</h3>
+            <div class="small">Latest: <span id="additionDate">2025-10-31</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="big" id="additionScore">10</div>
+            <div class="muted">score</div>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="progressBar"><div id="addFill" class="progressFill" style="width:10%"></div></div>
+        </div>
+      </div>
+
+      <div class="card col-span-4">
+        <div class="muted">Quick Controls</div>
+        <div class="controls" style="margin-top:8px">
+          <button id="btnLast7">Last 7 days</button>
+          <button id="btnLast30" class="secondary">Last 30 days</button>
+          <button id="btnLive" class="secondary">Simulate session</button>
+        </div>
+        <div class="small" style="margin-top:10px">Tip: Import a JSON array of session records to populate dashboard.</div>
+      </div>
+
+      <!-- Charts -->
+      <div class="card col-span-8">
+        <h3 style="margin-top:0;margin-bottom:6px">Score Over Time</h3>
+        <canvas id="scoreLine" height="120"></canvas>
+      </div>
+
+      <div class="card col-span-4">
+        <h3 style="margin-top:0;margin-bottom:6px">Time Spent Per Game</h3>
+        <canvas id="timePie" height="200"></canvas>
+      </div>
+
+      <div class="card col-span-4">
+        <h3 style="margin-top:0;margin-bottom:6px">Average Score by Game</h3>
+        <canvas id="gameBar" height="200"></canvas>
+      </div>
+
+      <div class="card col-span-8">
+        <h3 style="margin-top:0;margin-bottom:6px">Detailed Activity Log</h3>
+        <div class="table-wrap">
+          <table id="logTable">
+            <thead>
+              <tr><th>Date</th><th>Game</th><th>Duration (min)</th><th>Score</th><th>Notes</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer>Built for Homi — Front-end only demo. Import / export JSON to persist data.</footer>
+  </div>
+
+  <input type="file" id="fileInput" accept="application/json" style="display:none" />
+  <script>
+    // === Constants ===
+    // Today's date (Asia/Dhaka) per your request: 2025-10-31
+    const TODAY_STR = '2025-10-31';
+
+    // ======= Sample data (can be replaced by import) =======
+    // Each entry: {date: 'YYYY-MM-DD', game:'addition', duration: minutes, score:0..100, notes:''}
+    let data = [
+      // small amount of sample data including face_parts and addition with score 10 and today's date
+      {date: TODAY_STR, game:'face_parts', duration:5, score:10, notes:'practice matching'},
+      {date: TODAY_STR, game:'addition', duration:10, score:10, notes:'quick round'},
+      {date:'2025-09-01', game:'addition', duration:12, score:80, notes:'earlier session'},
+      {date:'2025-09-02', game:'colors', duration:8, score:60, notes:'painting'},
+      {date:'2025-09-03', game:'multiplication', duration:20, score:55, notes:'took help'},
+    ];
+
+    // ======= Utility functions =======
+    function computeSummary(arr){
+      const totalPlay = arr.reduce((s,e)=>s + (e.duration||0), 0);
+      const games = new Set(arr.map(d=>d.game));
+      const days = new Set(arr.map(d=>d.date));
+      const avgScore = arr.length ? Math.round(arr.reduce((s,e)=>s + (e.score||0),0)/arr.length) : 0;
+      return { totalPlay, gamesPlayed: games.size, activeDays: days.size, avgScore };
+    }
+
+    const lineCtx = document.getElementById('scoreLine').getContext('2d');
+    const pieCtx = document.getElementById('timePie').getContext('2d');
+    const barCtx = document.getElementById('gameBar').getContext('2d');
+    let lineChart, pieChart, barChart;
+
+    function renderAll(arr){
+      // summary
+      const summary = computeSummary(arr);
+      document.getElementById('totalPlay').innerText = summary.totalPlay;
+      document.getElementById('gamesPlayed').innerText = summary.gamesPlayed;
+      document.getElementById('activeDays').innerText = summary.activeDays;
+      document.getElementById('avgScore').innerText = summary.avgScore;
+
+      // update progress cards for face_parts and addition (show latest score & date)
+      const fpItems = arr.filter(x=> x.game === 'face_parts').sort((a,b)=> b.date.localeCompare(a.date));
+      const addItems = arr.filter(x=> x.game === 'addition').sort((a,b)=> b.date.localeCompare(a.date));
+      if(fpItems.length){
+        document.getElementById('facePartsScore').innerText = fpItems[0].score ?? '—';
+        document.getElementById('facePartsDate').innerText = fpItems[0].date;
+        const pct = Math.max(0, Math.min(100, (fpItems[0].score||0)));
+        document.getElementById('fpFill').style.width = pct + '%';
+      }
+      if(addItems.length){
+        document.getElementById('additionScore').innerText = addItems[0].score ?? '—';
+        document.getElementById('additionDate').innerText = addItems[0].date;
+        const pct = Math.max(0, Math.min(100, (addItems[0].score||0)));
+        document.getElementById('addFill').style.width = pct + '%';
+      }
+
+      // Score over time line chart (average score per date)
+      const byDate = {};
+      arr.forEach(r=>{
+        if(!byDate[r.date]) byDate[r.date] = {sum:0,count:0};
+        byDate[r.date].sum += (r.score||0);
+        byDate[r.date].count++;
+      });
+      const dates = Object.keys(byDate).sort();
+      const avgScores = dates.map(d => Math.round(byDate[d].sum / byDate[d].count));
+
+      if(lineChart) lineChart.destroy();
+      lineChart = new Chart(lineCtx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Average score',
+            data: avgScores,
+            fill: true,
+            tension: 0.25,
+            borderWidth: 2,
+            backgroundColor: 'rgba(108,99,255,0.12)',
+            borderColor: 'rgba(108,99,255,0.9)',
+            pointRadius: 3
+          }]
+        },
+        options:{
+          responsive:true,
+          plugins:{legend:{display:false}},
+          scales:{ y: { min:0, max:100 } }
+        }
+      });
+
+      // Time per game pie
+      const timeByGame = {};
+      arr.forEach(d=> timeByGame[d.game] = (timeByGame[d.game]||0) + (d.duration||0) );
+      const gLabels = Object.keys(timeByGame);
+      const gValues = gLabels.map(l=> timeByGame[l]);
+      if(pieChart) pieChart.destroy();
+      pieChart = new Chart(pieCtx, {
+        type:'pie',
+        data:{ labels: gLabels, datasets: [{ data: gValues, hoverOffset:8 }] },
+        options:{ plugins:{ legend:{ position:'right' } } }
+      });
+
+      // Average score by game bar
+      const scoreByGame = {};
+      arr.forEach(d=>{
+        scoreByGame[d.game] = scoreByGame[d.game] || {sum:0,count:0};
+        scoreByGame[d.game].sum += (d.score||0);
+        scoreByGame[d.game].count++;
+      });
+      const sLabels = Object.keys(scoreByGame);
+      const sVals = sLabels.map(l => Math.round(scoreByGame[l].sum / scoreByGame[l].count));
+      if(barChart) barChart.destroy();
+      barChart = new Chart(barCtx, {
+        type:'bar',
+        data:{ labels: sLabels, datasets: [{ label:'Avg Score', data: sVals, borderRadius:6 }] },
+        options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ min:0, max:100 } } }
+      });
+
+      // table
+      const tbody = document.querySelector('#logTable tbody');
+      tbody.innerHTML = '';
+      const sorted = arr.slice().sort((a,b)=> b.date.localeCompare(a.date));
+      sorted.forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + (r.date||'') + '</td>'
+                     + '<td>' + (r.game||'') + '</td>'
+                     + '<td>' + (r.duration||0) + '</td>'
+                     + '<td>' + (r.score!==undefined ? r.score : '') + '</td>'
+                     + '<td>' + (r.notes||'') + '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    // initial render
+    renderAll(data);
+
+    // === file import/export ===
+    const fileInput = document.getElementById('fileInput');
+    document.getElementById('importBtn').addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const parsed = JSON.parse(reader.result);
+          if(Array.isArray(parsed)) {
+            data = parsed;
+            renderAll(data);
+            alert('Imported '+data.length+' records');
+          } else alert('JSON must be an array of records');
+        }catch(err){ alert('Invalid JSON: ' + err.message); }
+      };
+      reader.readAsText(f);
+      // reset input
+      e.target.value = '';
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'homi_data_export.json';
+      a.click();
+      setTimeout(()=> URL.revokeObjectURL(a.href), 1000);
+    });
+
+    // === filters & simulate ===
+    document.getElementById('btnLast7').addEventListener('click', ()=>{
+      const last7 = filterLastNDays(7);
+      renderAll(last7);
+    });
+    document.getElementById('btnLast30').addEventListener('click', ()=>{
+      const last30 = filterLastNDays(30);
+      renderAll(last30);
+    });
+    document.getElementById('btnLive').addEventListener('click', ()=> simulateSession());
+
+    function filterLastNDays(n){
+      // use TODAY_STR to anchor "today"
+      const today = new Date(TODAY_STR + 'T00:00:00');
+      return data.filter(d=>{
+        const dt = new Date(d.date + 'T00:00:00');
+        const diff = (today - dt) / (1000*60*60*24);
+        return diff < n;
+      });
+    }
+
+    function simulateSession(){
+      const games = ['addition','multiplication','division','colors','shapes','finger_count','face_parts'];
+      const newEntry = {
+        date: TODAY_STR,
+        game: games[Math.floor(Math.random()*games.length)],
+        duration: Math.round(Math.random()*20) + 3,
+        score: Math.round(Math.random()*40) + 50,
+        notes: 'auto-sim'
+      };
+      data.push(newEntry);
+      renderAll(data);
+      alert('Simulated one session added: ' + newEntry.game);
+    }
+
+    // expose data for dev/debug
+    window._HOMI_DATA = data;
+  </script>
+</body>
+</html>
